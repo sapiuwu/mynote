@@ -1,18 +1,19 @@
 from tkinter import *
+from tkinter import ttk
 from function.file import *
 from function.edit import *
 
 
 class mynote(Frame):
     def __init__(self, parent=None, file=None):
-        Frame. __init__(self, parent)
-        self.frame = Frame(parent)
-        self.frame.pack(fill=X)
-        self.layout = Frame(app)
+        Frame.__init__(self, parent)
+        self.pack(fill=BOTH, expand=YES)
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=BOTH, expand=YES)
+
         self.createFile()
         parent.title("MyNote")
         self.createMenu()
-        self.textarea()
         self.index = 1.0
         self.path = ''
 
@@ -22,7 +23,7 @@ class mynote(Frame):
 
         file_menu = Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="New", command=self.create_new)
+        file_menu.add_command(label="New", command=self.createFile)
         file_menu.add_command(label="Open", command=lambda: openf(self))
         file_menu.add_command(label="Save", command=lambda: savef(self))
         file_menu.add_separator()
@@ -35,15 +36,24 @@ class mynote(Frame):
 
         menubar.add_command(label="Exit", command=lambda: quitf(self))
 
-    def create_new(self):
-        mynote(Frame)
-
     def createFile(self):
-        self.layout.pack(fill=BOTH, expand=1, padx=17, pady=5)
-        title = Label(self.layout, text='File name: ')
-        title.pack(side=LEFT)
-        self.ftitle = Entry(self.layout)
-        self.ftitle.pack(side=LEFT, expand=YES, fill=X)
+        new_editor = Text(self.notebook, relief=SUNKEN)
+        scroll = Scrollbar(new_editor)
+        new_editor.config(yscrollcommand=scroll.set)
+        scroll.config(command=new_editor.yview)
+        scroll.pack(side=RIGHT, fill=Y)
+        new_editor.pack(side=LEFT, fill=BOTH, expand=YES)
+
+        close_button = Button(
+            new_editor, text="Close Tab", cursor="hand2", command=lambda tab=new_editor: self.close_tab(tab))
+        close_button.place(relx=1.0, anchor='ne')
+
+        self.notebook.add(new_editor, text="Untitled")
+
+    def close_tab(self, tab):
+        tab_id = self.notebook.index(tab)
+        if tab_id >= 0:
+            self.notebook.forget(tab_id)
 
     def textarea(self):
         scroll = Scrollbar(self)
