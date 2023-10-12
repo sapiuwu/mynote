@@ -1,6 +1,7 @@
 # MyNote
 
 Mynote is an open source simple text editor developed using python 3.x and tkinter library.
+![Screenshot_89](https://github.com/aliftech/mynote/assets/47414125/c8cee4bd-9639-4172-a096-a5cf83f08c96)
 
 ## Requirements
 
