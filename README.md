@@ -1,15 +1,34 @@
-# mynote
-A simple Text Editor
+# MyNote
 
-The MyNote application is a simple text editor created using python
+Mynote is an open source simple text editor developed using python 3.x and tkinter library.
 
-<b>Requirements</b>
-1. Python 3
-2. Tkinter
+## Requirements
 
-<b>How to Use</b>
-1. Before you run the application, make sure that your computer is already installed with python
-2. extract the zip file of mynote that you have been downloaded
-3. Put the folder mynote or mynote.py file in your python directory
-4. run the program by this command (in linux):
-    python3 mynote.py
+- Python 3.x
+- Tkinter
+
+## How To Run ?
+
+To run this project you need to run this following command.
+
+```
+cd mynote
+```
+
+```
+python mynote.py
+```
+
+## Build
+
+You can also build this application as an executable .exe app. To do that, you need to install PyInstaller by the following command.
+
+```
+pip install pyinstaller
+```
+
+then run this command to build your own text editor
+
+```
+pyinstaller --onefile mynote.py
+```
