@@ -244,7 +244,7 @@ body {
 
 .editor-wrapper { display: none; height: 100%; position: relative; }
 .editor-wrapper.active { display: flex; }
-.editor-container { display: flex; flex: 1; overflow: hidden; }
+.editor-container { display: flex; flex: 1; overflow: hidden; position: relative; }
 
 /* Line Numbers */
 .line-numbers {
@@ -257,14 +257,49 @@ body {
 .line-numbers div { padding-right: 12px; height: 22.4px; display: flex; align-items: center; justify-content: flex-end; }
 .line-numbers div.active-line { color: var(--text-primary); }
 
+/* Syntax Highlight Overlay */
+.highlight-layer {
+  position: absolute; top: 0; left: 50px; right: 0; bottom: 0;
+  padding: 10px 14px; overflow: auto;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 14px; line-height: 1.6; tab-size: 4; white-space: pre;
+  pointer-events: none; color: var(--text-primary);
+}
+
+.highlight-code {
+  display: block; min-height: 100%;
+  font-family: inherit; font-size: inherit; line-height: inherit;
+  white-space: pre; word-wrap: normal;
+}
+
 textarea {
-  flex: 1; width: 100%; height: 100%; background: var(--bg-primary);
-  color: var(--text-primary); border: none; padding: 10px 14px;
+  flex: 1; width: 100%; height: 100%; background: transparent;
+  color: transparent; caret-color: #aeafad; border: none;
+  padding: 10px 14px; position: relative; z-index: 1;
   font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
   font-size: 14px; line-height: 1.6; resize: none; outline: none;
   tab-size: 4; white-space: pre; overflow: auto; user-select: text;
 }
+textarea::selection { background: rgba(38, 79, 120, 0.6); }
 textarea:focus { outline: none; }
+
+/* File Icons */
+.tab-file-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 16px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+  letter-spacing: 0.3px; font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.file-icon-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 16px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+  letter-spacing: 0.3px; font-family: 'Cascadia Code', Consolas, monospace;
+}
+
+.sidebar-file { display: flex; align-items: center; gap: 6px; padding: 4px 12px; }
+.tree-file { display: flex; align-items: center; gap: 6px; padding: 3px 8px; }
 
 /* Terminal */
 #terminal-panel {

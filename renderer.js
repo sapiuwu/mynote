@@ -307,17 +307,21 @@ function applySetting(key, value) {
     case 'fontSize':
       document.querySelectorAll('textarea').forEach(ta => { ta.style.fontSize = `${value}px`; });
       document.querySelectorAll('.line-numbers').forEach(ln => { ln.style.fontSize = `${value}px`; });
+      document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.fontSize = `${value}px`; });
       break;
     case 'tabSize':
       document.querySelectorAll('textarea').forEach(ta => { ta.style.tabSize = value; });
+      document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.tabSize = value; });
       break;
     case 'wordWrap':
       document.querySelectorAll('textarea').forEach(ta => { ta.style.whiteSpace = value ? 'pre-wrap' : 'pre'; });
+      document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.whiteSpace = value ? 'pre-wrap' : 'pre'; });
       break;
     case 'lineNumbers':
       document.querySelectorAll('.line-numbers').forEach(ln => { ln.style.display = value ? '' : 'none'; });
       break;
   }
+}
 }
 
 // ===================== CONTEXT MENU =====================

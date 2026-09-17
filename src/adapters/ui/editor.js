@@ -43,7 +43,9 @@ class EditorUI {
     const tabEl = document.createElement('div');
     tabEl.className = 'tab';
     tabEl.dataset.id = id;
+    const icon = SyntaxHighlighter.getFileIcon(title);
     tabEl.innerHTML = `
+      <span class="tab-file-icon" style="background:${icon.bg};color:${icon.color}">${icon.label}</span>
       <span class="tab-dot"></span>
       <span class="tab-title">${this._escapeHtml(title)}</span>
       <button class="tab-close">&times;</button>
@@ -60,12 +62,22 @@ class EditorUI {
     lineNumbers.className = 'line-numbers';
     lineNumbers.id = `lines-${id}`;
 
+    // Syntax highlight overlay
+    const highlightLayer = document.createElement('div');
+    highlightLayer.className = 'highlight-layer';
+    highlightLayer.id = `highlight-${id}`;
+
+    const highlightCode = document.createElement('code');
+    highlightCode.className = 'highlight-code';
+    highlightLayer.appendChild(highlightCode);
+
     const textarea = document.createElement('textarea');
     textarea.id = `editor-${id}`;
     textarea.spellcheck = false;
     textarea.value = content;
 
     container.appendChild(lineNumbers);
+    container.appendChild(highlightLayer);
     container.appendChild(textarea);
     wrapper.appendChild(container);
     this._elements.editors.appendChild(wrapper);
@@ -81,7 +93,6 @@ class EditorUI {
       this.closeTab(id);
     });
 
-    // Double-click tab to rename
     tabEl.querySelector('.tab-title').addEventListener('dblclick', (e) => {
       e.stopPropagation();
       this.startRenameTab(id);
@@ -94,6 +105,7 @@ class EditorUI {
         this._updateTitlebar();
       }
       this._updateLineNumbers(id);
+      this._updateHighlight(id);
       this.updateStatusBar();
       this._updateSidebar();
       this.bus.emit('editor:change', { tab, content: textarea.value });
@@ -101,6 +113,8 @@ class EditorUI {
 
     textarea.addEventListener('scroll', () => {
       lineNumbers.scrollTop = textarea.scrollTop;
+      highlightLayer.scrollTop = textarea.scrollTop;
+      highlightLayer.scrollLeft = textarea.scrollLeft;
     });
 
     textarea.addEventListener('click', () => this.updateStatusBar());
@@ -117,6 +131,8 @@ class EditorUI {
       }
     });
 
+    // Initial highlight
+    this._updateHighlight(id);
     this.switchTab(id);
     return tab;
   }
@@ -178,6 +194,7 @@ class EditorUI {
     }
 
     this._updateLineNumbers(id);
+    this._updateHighlight(id);
     this.updateStatusBar();
     this._updateSidebar();
     this._updateTitlebar();
@@ -230,6 +247,8 @@ class EditorUI {
     editor.value = before + text + after;
     editor.setSelectionRange(pos + text.length, pos + text.length);
     editor.dispatchEvent(new Event('input'));
+    const tab = this.getActiveTab();
+    if (tab) this._updateHighlight(tab.id);
   }
 
   deleteSelection() {
@@ -241,6 +260,8 @@ class EditorUI {
     editor.value = editor.value.substring(0, start) + editor.value.substring(end);
     editor.setSelectionRange(start, start);
     editor.dispatchEvent(new Event('input'));
+    const tab = this.getActiveTab();
+    if (tab) this._updateHighlight(tab.id);
   }
 
   getContent() {
@@ -250,7 +271,12 @@ class EditorUI {
 
   setContent(content) {
     const editor = this.getActiveEditor();
-    if (editor) { editor.value = content; editor.dispatchEvent(new Event('input')); }
+    if (editor) {
+      editor.value = content;
+      editor.dispatchEvent(new Event('input'));
+      const tab = this.getActiveTab();
+      if (tab) this._updateHighlight(tab.id);
+    }
   }
 
   updateStatusBar() {
@@ -285,20 +311,17 @@ class EditorUI {
 
   setZoom(val) {
     this.currentZoom = Math.max(50, Math.min(200, val));
-    document.querySelectorAll('textarea').forEach(ta => {
-      ta.style.fontSize = `${14 * this.currentZoom / 100}px`;
-    });
-    document.querySelectorAll('.line-numbers').forEach(ln => {
-      ln.style.fontSize = `${14 * this.currentZoom / 100}px`;
-    });
+    const size = 14 * this.currentZoom / 100;
+    document.querySelectorAll('textarea').forEach(ta => { ta.style.fontSize = `${size}px`; });
+    document.querySelectorAll('.line-numbers').forEach(ln => { ln.style.fontSize = `${size}px`; });
+    document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.fontSize = `${size}px`; });
     this.updateStatusBar();
   }
 
   toggleWordWrap() {
     this.wordWrap = !this.wordWrap;
-    document.querySelectorAll('textarea').forEach(ta => {
-      ta.style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre';
-    });
+    document.querySelectorAll('textarea').forEach(ta => { ta.style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre'; });
+    document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre'; });
   }
 
   toggleLineNumbers() {
@@ -396,9 +419,8 @@ class EditorUI {
       fileEl.className = 'tree-file';
       fileEl.style.paddingLeft = `${12 + depth * 16}px`;
 
-      const ext = item.name.split('.').pop().toLowerCase();
-      const icon = this._getFileIcon(ext);
-      fileEl.innerHTML = `<span class="tree-icon">${icon}</span><span class="tree-name">${this._escapeHtml(item.name)}</span>`;
+      const icon = SyntaxHighlighter.getFileIcon(item.name);
+      fileEl.innerHTML = `<span class="file-icon-badge" style="background:${icon.bg};color:${icon.color}">${icon.label}</span><span class="tree-name">${this._escapeHtml(item.name)}</span>`;
 
       fileEl.addEventListener('click', () => this.bus.emit('explorer:openfile', item));
       fileEl.addEventListener('contextmenu', (e) => {
@@ -409,18 +431,6 @@ class EditorUI {
       el.appendChild(fileEl);
     }
     return el;
-  }
-
-  _getFileIcon(ext) {
-    const icons = {
-      js: '📜', ts: '📜', py: '🐍', html: '🌐', css: '🎨',
-      json: '📋', md: '📝', txt: '📄', xml: '📋', yml: '⚙️',
-      yaml: '⚙️', sh: '🖥️', bat: '🖥️', c: '⚙️', cpp: '⚙️',
-      h: '⚙️', java: '☕', rs: '🦀', go: '🔵', rb: '💎',
-      php: '🐘', sql: '🗃️', png: '🖼️', jpg: '🖼️', gif: '🖼️',
-      svg: '🖼️', pdf: '📕', zip: '📦'
-    };
-    return icons[ext] || '📄';
   }
 
   refreshWorkspace() {
@@ -494,9 +504,8 @@ class EditorUI {
       const el = document.createElement('div');
       el.className = 'sidebar-file' + (t.active ? ' active' : '');
       const modified = t.modified ? '● ' : '';
-      const ext = t.title.split('.').pop().toLowerCase();
-      const icon = this._getFileIcon(ext);
-      el.innerHTML = `<span class="tree-icon">${icon}</span><span>${modified}${this._escapeHtml(t.title)}</span>`;
+      const icon = SyntaxHighlighter.getFileIcon(t.title);
+      el.innerHTML = `<span class="file-icon-badge" style="background:${icon.bg};color:${icon.color}">${icon.label}</span><span>${modified}${this._escapeHtml(t.title)}</span>`;
       el.addEventListener('click', () => this.switchTab(t.id));
       el.addEventListener('dblclick', (e) => {
         e.stopPropagation();
@@ -533,6 +542,17 @@ class EditorUI {
     lineEl.innerHTML = html;
   }
 
+  _updateHighlight(id) {
+    const highlightCode = document.querySelector(`#highlight-${id} .highlight-code`);
+    const textarea = document.getElementById(`editor-${id}`);
+    const tab = this.tabs.find(t => t.id === id);
+    if (!highlightCode || !textarea || !tab) return;
+
+    const language = SyntaxHighlighter.detectLanguage(tab.title);
+    const highlighted = SyntaxHighlighter.highlight(textarea.value, language);
+    highlightCode.innerHTML = highlighted + '\n';
+  }
+
   _handleKeys(e, id) {
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
@@ -551,7 +571,7 @@ class EditorUI {
         const content = tab.document.undo();
         if (content !== null) {
           const editor = document.getElementById(`editor-${id}`);
-          if (editor) editor.value = content;
+          if (editor) { editor.value = content; this._updateHighlight(id); }
         }
       }
     }
@@ -562,7 +582,7 @@ class EditorUI {
         const content = tab.document.redo();
         if (content !== null) {
           const editor = document.getElementById(`editor-${id}`);
-          if (editor) editor.value = content;
+          if (editor) { editor.value = content; this._updateHighlight(id); }
         }
       }
     }
