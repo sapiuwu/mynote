@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyNote</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <div id="titlebar">
+      <div class="titlebar-drag">
+        <span class="titlebar-icon">N</span>
+        <span class="titlebar-text">MyNote</span>
+      </div>
+      <div class="titlebar-controls">
+        <button class="ctrl-btn" id="btn-minimize">&#9472;</button>
+        <button class="ctrl-btn" id="btn-maximize">&#9723;</button>
+        <button class="ctrl-btn ctrl-close" id="btn-close">&#10005;</button>
+      </div>
+    </div>
+
+    <div id="main">
+      <div id="activity-bar">
+        <button class="activity-btn active" data-panel="explorer" title="Explorer (Ctrl+Shift+E)">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M17.5 0h-9L7 1.5V6H2.5L1 7.5v15.07L2.5 24h12.07L16 22.57V18h4.7l1.3-1.43V4.5L17.5 0zm0 2.12l2.38 2.38H17.5V2.12zm-3 20.38h-12v-15H7v9.07L8.5 18h6v4.5zm6-6h-12v-15H16V6h4.5v10.5z"/></svg>
+        </button>
+        <button class="activity-btn" data-panel="search" title="Search (Ctrl+Shift+F)">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.25 0a8.25 8.25 0 0 0-6.18 13.72L1 21.79l1.42 1.42 8.07-8.07A8.25 8.25 0 1 0 15.25 0zm0 15a6.75 6.75 0 1 1 0-13.5 6.75 6.75 0 0 1 0 13.5z"/></svg>
+        </button>
+        <button class="activity-btn" data-panel="plugins" title="Plugins">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+        </button>
+        <div class="activity-spacer"></div>
+        <button class="activity-btn" data-action="settings" title="Settings (Ctrl+,)">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        </button>
+      </div>
+
+      <div id="sidebar">
+        <!-- Explorer Panel -->
+        <div id="sidebar-explorer" class="sidebar-panel active">
+          <div class="sidebar-header">
+            <span>EXPLORER</span>
+          </div>
+          <div id="explorer-sections">
+            <div class="explorer-section">
+              <div class="explorer-section-header" data-section="workspace">
+                <span class="explorer-arrow">&#9654;</span>
+                <span>WORKSPACE</span>
+                <div class="explorer-actions">
+                  <button class="explorer-action-btn" id="btn-new-file" title="New File">&#128196;+</button>
+                  <button class="explorer-action-btn" id="btn-new-folder" title="New Folder">&#128193;+</button>
+                  <button class="explorer-action-btn" id="btn-open-folder" title="Open Folder">&#128194;</button>
+                </div>
+              </div>
+              <div id="explorer-workspace" class="explorer-content"></div>
+            </div>
+            <div class="explorer-section">
+              <div class="explorer-section-header" data-section="open">
+                <span class="explorer-arrow">&#9654;</span>
+                <span>OPEN FILES</span>
+              </div>
+              <div id="sidebar-files" class="explorer-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Panel -->
+        <div id="sidebar-search" class="sidebar-panel">
+          <div class="sidebar-header"><span>SEARCH</span></div>
+          <div class="sidebar-search-input">
+            <input type="text" id="sidebar-find-input" placeholder="Search in open files..." spellcheck="false">
+            <div class="search-options">
+              <label><input type="checkbox" id="sidebar-match-case"> Match Case</label>
+              <label><input type="checkbox" id="sidebar-whole-word"> Whole Word</label>
+              <label><input type="checkbox" id="sidebar-use-regex"> Regex</label>
+            </div>
+          </div>
+          <div id="sidebar-search-results"></div>
+        </div>
+
+        <!-- Plugins Panel -->
+        <div id="sidebar-plugins" class="sidebar-panel">
+          <div class="sidebar-header"><span>PLUGINS</span></div>
+          <div id="sidebar-plugins-list"></div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="sidebar-settings" class="sidebar-panel">
+          <div class="sidebar-header"><span>SETTINGS</span></div>
+          <div id="settings-content" class="settings-scroll"></div>
+        </div>
+      </div>
+
+      <div id="content">
+        <div id="tabs">
+          <div id="tabs-scroll"></div>
+          <button id="new-tab-btn" title="New Tab (Ctrl+N)">+</button>
+        </div>
+
+        <div id="find-panel" class="hidden">
+          <div class="find-row">
+            <div class="find-group">
+              <input type="text" id="find-input" placeholder="Find" spellcheck="false">
+              <button id="find-prev" title="Previous">&#9650;</button>
+              <button id="find-next" title="Next">&#9660;</button>
+              <span id="find-count">0 results</span>
+            </div>
+            <div class="find-group">
+              <label><input type="checkbox" id="find-match-case"> Match Case</label>
+              <label><input type="checkbox" id="find-whole-word"> Whole Word</label>
+            </div>
+            <button id="find-close" class="find-close-btn">&times;</button>
+          </div>
+          <div id="replace-row" class="hidden">
+            <div class="find-group">
+              <input type="text" id="replace-input" placeholder="Replace" spellcheck="false">
+            </div>
+            <div class="find-group replace-btns">
+              <button id="replace-one">Replace</button>
+              <button id="replace-all">Replace All</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="goto-panel" class="hidden">
+          <span>Go to Line:</span>
+          <input type="number" id="goto-input" min="1" value="1">
+          <button id="goto-go">Go</button>
+          <button id="goto-close">&times;</button>
+        </div>
+
+        <div id="editors"></div>
+
+        <div id="terminal-panel" class="hidden">
+          <div class="terminal-header">
+            <span>TERMINAL</span>
+            <button id="terminal-close" class="terminal-close-btn">&times;</button>
+          </div>
+          <div id="terminal-output"></div>
+          <div class="terminal-input-row">
+            <span class="terminal-prompt">$</span>
+            <input type="text" id="terminal-input" spellcheck="false" autocomplete="off">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="hidden">
+      <div class="ctx-item" data-action="new-file">New File</div>
+      <div class="ctx-item" data-action="new-folder">New Folder</div>
+      <div class="ctx-separator"></div>
+      <div class="ctx-item" data-action="rename">Rename (F2)</div>
+      <div class="ctx-item" data-action="delete">Delete</div>
+      <div class="ctx-separator"></div>
+      <div class="ctx-item" data-action="copy-path">Copy Path</div>
+      <div class="ctx-item" data-action="copy-name">Copy Name</div>
+    </div>
+
+    <!-- Command Palette -->
+    <div id="command-palette" class="hidden">
+      <div class="command-palette-dialog">
+        <div class="command-palette-header">
+          <input type="text" id="command-input" placeholder="Type a command..." spellcheck="false">
+          <button id="command-palette-close">&times;</button>
+        </div>
+        <div id="command-list"></div>
+      </div>
+    </div>
+
+    <div id="statusbar">
+      <div class="status-left">
+        <span class="status-item" id="status-branch">main</span>
+        <span class="status-sep">|</span>
+        <span class="status-item" id="status-cursor">Ln 1, Col 1</span>
+        <span class="status-item hidden" id="status-selection"></span>
+      </div>
+      <div class="status-center">
+        <span class="status-item" id="status-encoding">UTF-8</span>
+        <span class="status-sep">|</span>
+        <span class="status-item" id="status-eol">LF</span>
+        <span class="status-sep">|</span>
+        <span class="status-item" id="status-language">Plain Text</span>
+      </div>
+      <div class="status-right">
+        <span class="status-item" id="status-words">0 words</span>
+        <span class="status-sep">|</span>
+        <span class="status-item" id="status-lines">0 lines</span>
+        <span class="status-sep">|</span>
+        <button class="status-item" id="status-zoom" title="Click to reset zoom">100%</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/core/domain/tab.js"></script>
+  <script src="src/core/domain/cursor.js"></script>
+  <script src="src/core/domain/plugin.js"></script>
+  <script src="src/adapters/ui/event-bus.js"></script>
+  <script src="src/adapters/ui/editor.js"></script>
+  <script src="src/adapters/ui/find-replace.js"></script>
+  <script src="src/adapters/ui/command-palette.js"></script>
+  <script src="src/adapters/ui/goto-line.js"></script>
+  <script src="src/adapters/ui/terminal.js"></script>
+  <script src="src/plugins/word-counter/index.js"></script>
+  <script src="src/plugins/auto-save/index.js"></script>
+  <script src="src/plugins/bracket-colorizer/index.js"></script>
+  <script src="src/plugins/minimap/index.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
