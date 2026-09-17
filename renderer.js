@@ -2,12 +2,18 @@ const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-const editorUI = new EditorUI(eventBus);
-editorUI.init();
-const findReplaceUI = new FindReplaceUI(editorUI);
-const commandPalette = new CommandPaletteUI(editorUI, eventBus);
-const gotoLineUI = new GotoLineUI(editorUI);
-const terminalUI = new TerminalUI();
+let editorUI, findReplaceUI, commandPalette, gotoLineUI, terminalUI;
+
+try {
+  editorUI = new EditorUI(eventBus);
+  editorUI.init();
+  findReplaceUI = new FindReplaceUI(editorUI);
+  commandPalette = new CommandPaletteUI(editorUI, eventBus);
+  gotoLineUI = new GotoLineUI(editorUI);
+  terminalUI = new TerminalUI();
+} catch (err) {
+  console.error('Editor init error:', err);
+}
 
 // Plugin context
 const pluginContext = {
@@ -36,10 +42,15 @@ const pluginContext = {
   }
 };
 
-const pluginService = new PluginService(eventBus, pluginContext.editor);
-pluginService.loadAll([WordCounterPlugin, AutoSavePlugin, BracketColorizerPlugin, MinimapPlugin], pluginContext).then(() => {
-  updatePluginsSidebar();
-});
+let pluginService;
+try {
+  pluginService = new PluginService(eventBus, pluginContext.editor);
+  pluginService.loadAll([WordCounterPlugin, AutoSavePlugin, BracketColorizerPlugin, MinimapPlugin], pluginContext).then(() => {
+    updatePluginsSidebar();
+  }).catch(err => console.error('Plugin load error:', err));
+} catch (err) {
+  console.error('PluginService init error:', err);
+}
 
 // ===================== FILE OPERATIONS =====================
 async function openFile() {
@@ -581,24 +592,25 @@ eventBus.on('command:shortcuts', () => {
 eventBus.on('file:drop', (filePath) => openFilePath(filePath));
 eventBus.on('tab:renamed', () => editorUI._updateSidebar());
 
-// ===================== KEYBOARD =====================
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 'n') { e.preventDefault(); editorUI.createTab(); }
-  if (e.ctrlKey && e.key === 'o') { e.preventDefault(); openFile(); }
-  if (e.ctrlKey && e.shiftKey && e.key === 'O') { e.preventDefault(); openFolder(); }
-  if (e.ctrlKey && e.key === 's') { e.preventDefault(); e.shiftKey ? saveFileAs() : saveFile(); }
-  if (e.ctrlKey && e.key === 'w') { e.preventDefault(); const t = editorUI.getActiveTab(); if (t) editorUI.closeTab(t.id); }
-  if (e.ctrlKey && e.key === 'f') { e.preventDefault(); findReplaceUI.open(false); }
-  if (e.ctrlKey && e.key === 'h') { e.preventDefault(); findReplaceUI.open(true); }
-  if (e.ctrlKey && e.key === 'g') { e.preventDefault(); gotoLineUI.open(); }
-  if (e.ctrlKey && e.shiftKey && e.key === 'P') { e.preventDefault(); commandPalette.toggle(); }
-  if (e.ctrlKey && e.key === 'b') {
-    e.preventDefault();
+// ===================== KEYBOARD (capture phase - runs before textarea) =====================
+window.addEventListener('keydown', (e) => {
+  const ctrl = e.ctrlKey || e.metaKey;
+
+  if (ctrl && e.key === 'n') { e.preventDefault(); e.stopPropagation(); editorUI.createTab(); return; }
+  if (ctrl && !e.shiftKey && e.key === 'o') { e.preventDefault(); e.stopPropagation(); openFile(); return; }
+  if (ctrl && e.shiftKey && (e.key === 'O' || e.key === 'o')) { e.preventDefault(); e.stopPropagation(); openFolder(); return; }
+  if (ctrl && e.key === 's') { e.preventDefault(); e.stopPropagation(); e.shiftKey ? saveFileAs() : saveFile(); return; }
+  if (ctrl && e.key === 'w') { e.preventDefault(); e.stopPropagation(); const t = editorUI.getActiveTab(); if (t) editorUI.closeTab(t.id); return; }
+  if (ctrl && e.key === 'f') { e.preventDefault(); e.stopPropagation(); findReplaceUI.open(false); return; }
+  if (ctrl && e.key === 'h') { e.preventDefault(); e.stopPropagation(); findReplaceUI.open(true); return; }
+  if (ctrl && e.key === 'g') { e.preventDefault(); e.stopPropagation(); gotoLineUI.open(); return; }
+  if (ctrl && e.shiftKey && (e.key === 'P' || e.key === 'p')) { e.preventDefault(); e.stopPropagation(); commandPalette.toggle(); return; }
+  if (ctrl && e.key === 'b') {
+    e.preventDefault(); e.stopPropagation();
     const sidebar = document.getElementById('sidebar');
     const isCollapsed = sidebar.classList.contains('collapsed');
     if (isCollapsed) {
       sidebar.classList.remove('collapsed');
-      // Activate the first panel button
       const firstBtn = document.querySelector('.activity-btn[data-panel]');
       if (firstBtn) {
         document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
@@ -612,15 +624,16 @@ document.addEventListener('keydown', (e) => {
       sidebar.classList.add('collapsed');
       document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
     }
+    return;
   }
-  if (e.ctrlKey && e.key === '`') { e.preventDefault(); terminalUI.toggle(); }
-  if (e.ctrlKey && e.key === '=') { e.preventDefault(); editorUI.setZoom(editorUI.currentZoom + 10); }
-  if (e.ctrlKey && e.key === '-') { e.preventDefault(); editorUI.setZoom(editorUI.currentZoom - 10); }
-  if (e.ctrlKey && e.key === '0') { e.preventDefault(); editorUI.setZoom(100); }
-  if (e.altKey && e.key === 'z') { e.preventDefault(); editorUI.toggleWordWrap(); }
-  if (e.key === 'F11') { e.preventDefault(); ipcRenderer.send('window-maximize'); }
-  if (e.key === 'Escape') { findReplaceUI.close(); gotoLineUI.close(); commandPalette.close(); }
-});
+  if (ctrl && e.key === '`') { e.preventDefault(); e.stopPropagation(); terminalUI.toggle(); return; }
+  if (ctrl && e.key === '=') { e.preventDefault(); e.stopPropagation(); editorUI.setZoom(editorUI.currentZoom + 10); return; }
+  if (ctrl && e.key === '-') { e.preventDefault(); e.stopPropagation(); editorUI.setZoom(editorUI.currentZoom - 10); return; }
+  if (ctrl && e.key === '0') { e.preventDefault(); e.stopPropagation(); editorUI.setZoom(100); return; }
+  if (e.altKey && e.key === 'z') { e.preventDefault(); e.stopPropagation(); editorUI.toggleWordWrap(); return; }
+  if (e.key === 'F11') { e.preventDefault(); e.stopPropagation(); ipcRenderer.send('window-maximize'); return; }
+  if (e.key === 'Escape') { findReplaceUI.close(); gotoLineUI.close(); commandPalette.close(); return; }
+}, true);
 
 // ===================== WINDOW CONTROLS =====================
 document.getElementById('btn-minimize')?.addEventListener('click', () => ipcRenderer.send('window-minimize'));
@@ -629,8 +642,12 @@ document.getElementById('btn-close')?.addEventListener('click', () => ipcRendere
 document.getElementById('terminal-close')?.addEventListener('click', () => terminalUI.close());
 
 // ===================== INIT =====================
-initSidebar();
-initSearch();
-initContextMenu();
-terminalUI.log('MyNote v3.0.0 ready.');
-terminalUI.log('Use Ctrl+Shift+P for command palette. Ctrl+K Ctrl+O to open folder.');
+try {
+  initSidebar();
+  initSearch();
+  initContextMenu();
+  terminalUI.log('MyNote v3.1.0 ready.');
+  terminalUI.log('Ctrl+Shift+P = Command Palette | Ctrl+B = Sidebar | Ctrl+` = Terminal');
+} catch (err) {
+  console.error('Init error:', err);
+}
