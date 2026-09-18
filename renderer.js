@@ -336,6 +336,98 @@ function applySetting(key, value) {
   }
 }
 
+// ===================== CUSTOM DIALOGS (prompt/confirm don't work in frameless Electron) =====================
+function showInputDialog(title, defaultValue = '') {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000;';
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:20px;width:400px;box-shadow:0 8px 30px rgba(0,0,0,0.5);';
+
+    const label = document.createElement('div');
+    label.textContent = title;
+    label.style.cssText = 'margin-bottom:10px;font-size:14px;color:var(--text-primary);';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = defaultValue;
+    input.spellcheck = false;
+    input.style.cssText = 'width:100%;background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);padding:8px 10px;font-size:14px;border-radius:3px;outline:none;margin-bottom:15px;user-select:text;';
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { resolve(input.value.trim() || null); overlay.remove(); }
+      if (e.key === 'Escape') { resolve(null); overlay.remove(); }
+    });
+
+    const buttons = document.createElement('div');
+    buttons.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:6px 16px;cursor:pointer;border-radius:3px;font-size:13px;';
+    cancelBtn.addEventListener('click', () => { resolve(null); overlay.remove(); });
+
+    const okBtn = document.createElement('button');
+    okBtn.textContent = 'OK';
+    okBtn.style.cssText = 'background:var(--accent);border:none;color:#fff;padding:6px 16px;cursor:pointer;border-radius:3px;font-size:13px;';
+    okBtn.addEventListener('click', () => { resolve(input.value.trim() || null); overlay.remove(); });
+
+    buttons.appendChild(cancelBtn);
+    buttons.appendChild(okBtn);
+    dialog.appendChild(label);
+    dialog.appendChild(input);
+    dialog.appendChild(buttons);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { resolve(null); overlay.remove(); } });
+    input.focus();
+    input.select();
+  });
+}
+
+function showConfirmDialog(message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000;';
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:20px;width:380px;box-shadow:0 8px 30px rgba(0,0,0,0.5);';
+
+    const label = document.createElement('div');
+    label.textContent = message;
+    label.style.cssText = 'margin-bottom:20px;font-size:14px;color:var(--text-primary);';
+
+    const buttons = document.createElement('div');
+    buttons.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:6px 16px;cursor:pointer;border-radius:3px;font-size:13px;';
+    cancelBtn.addEventListener('click', () => { resolve(false); overlay.remove(); });
+
+    const okBtn = document.createElement('button');
+    okBtn.textContent = 'OK';
+    okBtn.style.cssText = 'background:#e81123;border:none;color:#fff;padding:6px 16px;cursor:pointer;border-radius:3px;font-size:13px;';
+    okBtn.addEventListener('click', () => { resolve(true); overlay.remove(); });
+
+    buttons.appendChild(cancelBtn);
+    buttons.appendChild(okBtn);
+    dialog.appendChild(label);
+    dialog.appendChild(buttons);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { resolve(false); overlay.remove(); } });
+    document.addEventListener('keydown', function handler(e) {
+      if (e.key === 'Escape') { resolve(false); overlay.remove(); document.removeEventListener('keydown', handler); }
+    });
+  });
+}
+
 // ===================== CONTEXT MENU =====================
 let contextTarget = null;
 
@@ -351,24 +443,24 @@ function initContextMenu() {
 
       switch (action) {
         case 'new-file': {
-          const name = prompt('File name:');
+          const name = await showInputDialog('File name:');
           if (name) await editorUI.createFileInWorkspace(name, contextTarget.type === 'folder' ? contextTarget.path : path.dirname(contextTarget.path));
           break;
         }
         case 'new-folder': {
-          const name = prompt('Folder name:');
+          const name = await showInputDialog('Folder name:');
           if (name) await editorUI.createFolderInWorkspace(name, contextTarget.type === 'folder' ? contextTarget.path : path.dirname(contextTarget.path));
           break;
         }
         case 'rename': {
-          const newName = prompt('New name:', contextTarget.name);
+          const newName = await showInputDialog('New name:', contextTarget.name);
           if (newName && newName !== contextTarget.name) {
             await editorUI.renameFileInWorkspace(contextTarget.path, newName);
           }
           break;
         }
         case 'delete': {
-          if (confirm(`Delete "${contextTarget.name}"?`)) {
+          if (await showConfirmDialog(`Delete "${contextTarget.name}"?`)) {
             await editorUI.deleteFileInWorkspace(contextTarget.path);
           }
           break;
@@ -461,7 +553,7 @@ function initSidebar() {
       await openFolder();
       if (!editorUI.workspacePath) return;
     }
-    const name = prompt('File name:');
+    const name = await showInputDialog('File name:');
     if (name) await editorUI.createFileInWorkspace(name);
   });
 
@@ -470,7 +562,7 @@ function initSidebar() {
       await openFolder();
       if (!editorUI.workspacePath) return;
     }
-    const name = prompt('Folder name:');
+    const name = await showInputDialog('Folder name:');
     if (name) await editorUI.createFolderInWorkspace(name);
   });
 
@@ -506,12 +598,12 @@ eventBus.on('command:open', () => openFile());
 eventBus.on('command:openFolder', () => openFolder());
 eventBus.on('command:newFile', async () => {
   if (!editorUI.workspacePath) { await openFolder(); if (!editorUI.workspacePath) return; }
-  const name = prompt('File name:');
+  const name = await showInputDialog('File name:');
   if (name) await editorUI.createFileInWorkspace(name);
 });
 eventBus.on('command:newFolder', async () => {
   if (!editorUI.workspacePath) { await openFolder(); if (!editorUI.workspacePath) return; }
-  const name = prompt('Folder name:');
+  const name = await showInputDialog('Folder name:');
   if (name) await editorUI.createFolderInWorkspace(name);
 });
 eventBus.on('command:save', () => saveFile());
