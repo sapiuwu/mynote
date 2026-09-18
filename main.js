@@ -14,18 +14,29 @@ function createWindow() {
     titleBarStyle: 'hidden',
     backgroundColor: '#1e1e1e',
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false
     }
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  const isDev = !fs.existsSync(path.join(__dirname, 'dist-renderer', 'index.html'));
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+  } else {
+    mainWindow.loadFile(path.join(__dirname, 'dist-renderer', 'index.html'));
+  }
 
-  mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized', true));
-  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximized', false));
+  mainWindow.on('maximize', () => send('window-maximized', true));
+  mainWindow.on('unmaximize', () => send('window-maximized', false));
 
   buildMenu();
   setupIPC();
+}
+
+function send(channel, ...args) {
+  if (mainWindow) mainWindow.webContents.send(channel, ...args);
 }
 
 function buildMenu() {
@@ -33,15 +44,15 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        { label: 'New Tab', accelerator: 'CmdOrCtrl+N', click: () => send('menu-new-tab') },
-        { label: 'Open File...', accelerator: 'CmdOrCtrl+O', click: () => send('menu-open') },
-        { label: 'Open Folder...', accelerator: 'CmdOrCtrl+Shift+O', click: () => send('menu-openFolder') },
+        { label: 'New Tab', accelerator: 'CmdOrCtrl+N', click: () => send('menu-command', 'menu-new-tab') },
+        { label: 'Open File...', accelerator: 'CmdOrCtrl+O', click: () => send('menu-command', 'menu-open') },
+        { label: 'Open Folder...', accelerator: 'CmdOrCtrl+Shift+O', click: () => send('menu-command', 'menu-openFolder') },
         { type: 'separator' },
-        { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => send('menu-save') },
-        { label: 'Save As...', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('menu-saveAs') },
-        { label: 'Save All', accelerator: 'CmdOrCtrl+Shift+Alt+S', click: () => send('menu-saveAll') },
+        { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => send('menu-command', 'menu-save') },
+        { label: 'Save As...', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('menu-command', 'menu-saveAs') },
+        { label: 'Save All', accelerator: 'CmdOrCtrl+Shift+Alt+S', click: () => send('menu-command', 'menu-saveAll') },
         { type: 'separator' },
-        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('menu-closeTab') },
+        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('menu-command', 'menu-closeTab') },
         { label: 'Exit', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
       ]
     },
@@ -57,23 +68,23 @@ function buildMenu() {
         { role: 'delete' },
         { role: 'selectAll' },
         { type: 'separator' },
-        { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => send('menu-find') },
-        { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => send('menu-replace') },
-        { label: 'Go to Line', accelerator: 'CmdOrCtrl+G', click: () => send('menu-gotoLine') }
+        { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => send('menu-command', 'menu-find') },
+        { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => send('menu-command', 'menu-replace') },
+        { label: 'Go to Line', accelerator: 'CmdOrCtrl+G', click: () => send('menu-command', 'menu-gotoLine') }
       ]
     },
     {
       label: 'View',
       submenu: [
-        { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => send('menu-commandPalette') },
+        { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => send('menu-command', 'menu-commandPalette') },
         { type: 'separator' },
-        { label: 'Toggle Word Wrap', accelerator: 'Alt+Z', click: () => send('menu-wordWrap') },
-        { label: 'Toggle Line Numbers', click: () => send('menu-lineNumbers') },
-        { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+B', click: () => send('menu-sidebar') },
+        { label: 'Toggle Word Wrap', accelerator: 'Alt+Z', click: () => send('menu-command', 'menu-wordWrap') },
+        { label: 'Toggle Line Numbers', click: () => send('menu-command', 'menu-lineNumbers') },
+        { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+B', click: () => send('menu-command', 'menu-sidebar') },
         { type: 'separator' },
-        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: () => send('menu-zoomIn') },
-        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: () => send('menu-zoomOut') },
-        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', click: () => send('menu-zoomReset') },
+        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: () => send('menu-command', 'menu-zoomIn') },
+        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: () => send('menu-command', 'menu-zoomOut') },
+        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', click: () => send('menu-command', 'menu-zoomReset') },
         { type: 'separator' },
         { label: 'Toggle Fullscreen', accelerator: 'F11', click: () => mainWindow.setFullScreen(!mainWindow.isFullScreen()) },
         { role: 'toggleDevTools' }
@@ -82,7 +93,7 @@ function buildMenu() {
     {
       label: 'Terminal',
       submenu: [
-        { label: 'New Terminal', accelerator: 'CmdOrCtrl+`', click: () => send('menu-terminal') }
+        { label: 'New Terminal', accelerator: 'CmdOrCtrl+`', click: () => send('menu-command', 'menu-terminal') }
       ]
     },
     {
@@ -93,8 +104,8 @@ function buildMenu() {
           click: () => dialog.showMessageBox(mainWindow, {
             type: 'info',
             title: 'About MyNote',
-            message: 'MyNote v3.0.0',
-            detail: 'A powerful text editor with plugin support.\n\nBuilt with Electron and Hexagonal Architecture.'
+            message: 'MyNote v4.0.0',
+            detail: 'A powerful text editor with plugin support.\n\nBuilt with Electron, TypeScript, and Hexagonal Architecture.'
           })
         },
         {
@@ -106,10 +117,6 @@ function buildMenu() {
   ]);
 
   Menu.setApplicationMenu(menu);
-}
-
-function send(channel) {
-  if (mainWindow) mainWindow.webContents.send(channel);
 }
 
 function setupIPC() {

@@ -1,14 +1,24 @@
 {
   "name": "mynote",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "description": "A powerful text editor built with Electron",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win --dir",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux"
+    "dev": "vite",
+    "build:renderer": "vite build",
+    "build:main": "echo 'main.js is not bundled'",
+    "start": "npm run build:renderer && electron .",
+    "preview": "vite preview",
+    "build": "npm run build:renderer && electron-builder",
+    "build:win": "npm run build:renderer && electron-builder --win --dir",
+    "build:mac": "npm run build:renderer && electron-builder --mac",
+    "build:linux": "npm run build:renderer && electron-builder --linux",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "npx playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
   },
   "build": {
     "appId": "com.aliftech.mynote",
@@ -19,11 +29,11 @@
     },
     "files": [
       "main.js",
-      "index.html",
-      "styles.css",
-      "renderer.js",
-      "src/**/*"
+      "preload.js",
+      "dist-renderer/**/*",
+      "src/**/*.js"
     ],
+    "extraResources": [],
     "win": {
       "target": "dir",
       "signAndEditExecutable": false
@@ -38,7 +48,12 @@
   "author": "aliftech",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.15.3",
     "electron": "^39.8.10",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2",
+    "vitest": "^3.1.1"
   }
 }

@@ -1,4 +1,7 @@
-class BracketColorizerPlugin extends Plugin {
+import { Plugin } from '../../core/domain/plugin';
+import type { PluginContext } from '../../core/domain/plugin';
+
+export class BracketColorizerPlugin extends Plugin {
   static METADATA = {
     id: 'builtin.bracket-colorizer',
     name: 'Bracket Colorizer',
@@ -7,7 +10,9 @@ class BracketColorizerPlugin extends Plugin {
     author: 'MyNote'
   };
 
-  async onActivate(ctx) {
+  private style: HTMLStyleElement | null = null;
+
+  protected async onActivate(ctx: PluginContext): Promise<void> {
     this.style = document.createElement('style');
     this.style.textContent = `
       .bracket-match {
@@ -18,19 +23,18 @@ class BracketColorizerPlugin extends Plugin {
     `;
     document.head.appendChild(this.style);
 
-    ctx.onEvent('editor:change', ({ tab }) => {
-      this.highlightBrackets(tab, ctx);
+    ctx.onEvent('editor:change', () => {
+      this.clearHighlights();
     });
   }
 
-  highlightBrackets(tab, ctx) {
-    // Remove existing highlights
+  private clearHighlights(): void {
     document.querySelectorAll('.bracket-match').forEach(el => {
       el.classList.remove('bracket-match');
     });
   }
 
-  async onDeactivate() {
+  protected async onDeactivate(): Promise<void> {
     if (this.style) this.style.remove();
   }
 }

@@ -1,6 +1,21 @@
-class EditorUI {
-  constructor(eventBus) {
-    this.bus = eventBus;
+import { Tab } from '../../core/domain/tab';
+import { SyntaxHighlighter } from '../../core/syntax-highlighter';
+import type { IEventBus, TreeItem } from '../../types';
+
+export class EditorUI {
+  bus: IEventBus;
+  tabs: Tab[];
+  activeTab: Tab | null;
+  private tabCounter: number;
+  wordWrap: boolean;
+  showLineNumbers: boolean;
+  currentZoom: number;
+  private _elements: Record<string, HTMLElement>;
+  workspacePath: string | null;
+  workspaceFiles: TreeItem[];
+
+  constructor(bus: IEventBus) {
+    this.bus = bus;
     this.tabs = [];
     this.activeTab = null;
     this.tabCounter = 0;
@@ -12,19 +27,19 @@ class EditorUI {
     this.workspaceFiles = [];
   }
 
-  init() {
+  init(): void {
     this._elements = {
-      tabsScroll: document.getElementById('tabs-scroll'),
-      editors: document.getElementById('editors'),
-      newTabBtn: document.getElementById('new-tab-btn'),
-      statusCursor: document.getElementById('status-cursor'),
-      statusSelection: document.getElementById('status-selection'),
-      statusWords: document.getElementById('status-words'),
-      statusLines: document.getElementById('status-lines'),
-      statusLanguage: document.getElementById('status-language'),
-      statusZoom: document.getElementById('status-zoom'),
-      sidebarFiles: document.getElementById('sidebar-files'),
-      titlebarText: document.querySelector('.titlebar-text')
+      tabsScroll: document.getElementById('tabs-scroll')!,
+      editors: document.getElementById('editors')!,
+      newTabBtn: document.getElementById('new-tab-btn')!,
+      statusCursor: document.getElementById('status-cursor')!,
+      statusSelection: document.getElementById('status-selection')!,
+      statusWords: document.getElementById('status-words')!,
+      statusLines: document.getElementById('status-lines')!,
+      statusLanguage: document.getElementById('status-language')!,
+      statusZoom: document.getElementById('status-zoom')!,
+      sidebarFiles: document.getElementById('sidebar-files')!,
+      titlebarText: document.querySelector('.titlebar-text') as HTMLElement
     };
 
     this._elements.newTabBtn.addEventListener('click', () => this.createTab());
@@ -33,7 +48,8 @@ class EditorUI {
     this.createTab();
   }
 
-  createTab({ title = 'Untitled', content = '', filePath = null } = {}) {
+  createTab(options: { title?: string; content?: string; filePath?: string | null } = {}): Tab {
+    const { title = 'Untitled', content = '', filePath = null } = options;
     const id = this.tabCounter++;
     const tab = new Tab({ title, content, filePath });
     tab.id = id;
@@ -42,7 +58,7 @@ class EditorUI {
 
     const tabEl = document.createElement('div');
     tabEl.className = 'tab';
-    tabEl.dataset.id = id;
+    tabEl.dataset.id = String(id);
     const icon = SyntaxHighlighter.getFileIcon(title);
     tabEl.innerHTML = `
       <span class="tab-file-icon" style="background:${icon.bg};color:${icon.color}">${icon.label}</span>
@@ -53,7 +69,7 @@ class EditorUI {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'editor-wrapper';
-    wrapper.dataset.id = id;
+    wrapper.dataset.id = String(id);
 
     const container = document.createElement('div');
     container.className = 'editor-container';
@@ -62,7 +78,6 @@ class EditorUI {
     lineNumbers.className = 'line-numbers';
     lineNumbers.id = `lines-${id}`;
 
-    // Syntax highlight overlay
     const highlightLayer = document.createElement('div');
     highlightLayer.className = 'highlight-layer';
     highlightLayer.id = `highlight-${id}`;
@@ -84,16 +99,16 @@ class EditorUI {
     this._elements.tabsScroll.appendChild(tabEl);
 
     tabEl.addEventListener('click', (e) => {
-      if (e.target.classList.contains('tab-close')) return;
+      if ((e.target as HTMLElement).classList.contains('tab-close')) return;
       this.switchTab(id);
     });
 
-    tabEl.querySelector('.tab-close').addEventListener('click', (e) => {
+    tabEl.querySelector('.tab-close')!.addEventListener('click', (e) => {
       e.stopPropagation();
       this.closeTab(id);
     });
 
-    tabEl.querySelector('.tab-title').addEventListener('dblclick', (e) => {
+    tabEl.querySelector('.tab-title')!.addEventListener('dblclick', (e) => {
       e.stopPropagation();
       this.startRenameTab(id);
     });
@@ -124,25 +139,26 @@ class EditorUI {
     textarea.addEventListener('dragover', (e) => e.preventDefault());
     textarea.addEventListener('drop', (e) => {
       e.preventDefault();
-      if (e.dataTransfer.files.length > 0) {
-        Array.from(e.dataTransfer.files).forEach(f => {
-          this.bus.emit('file:drop', f.path);
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        Array.from(files).forEach((f) => {
+          const path = (f as unknown as { path: string }).path;
+          if (path) this.bus.emit('file:drop', path);
         });
       }
     });
 
-    // Initial highlight
     this._updateHighlight(id);
     this.switchTab(id);
     return tab;
   }
 
-  startRenameTab(id) {
+  startRenameTab(id: number): void {
     const tab = this.tabs.find(t => t.id === id);
     const tabEl = document.querySelector(`.tab[data-id="${id}"]`);
     if (!tab || !tabEl) return;
 
-    const titleSpan = tabEl.querySelector('.tab-title');
+    const titleSpan = tabEl.querySelector('.tab-title') as HTMLElement;
     const currentTitle = tab.title;
 
     titleSpan.style.display = 'none';
@@ -151,7 +167,7 @@ class EditorUI {
     input.type = 'text';
     input.className = 'tab-rename-input';
     input.value = currentTitle;
-    titleSpan.parentNode.insertBefore(input, titleSpan);
+    titleSpan.parentNode!.insertBefore(input, titleSpan);
     input.focus();
     input.select();
 
@@ -173,7 +189,7 @@ class EditorUI {
     });
   }
 
-  switchTab(id) {
+  switchTab(id: number): void {
     const tab = this.tabs.find(t => t.id === id);
     if (!tab) return;
 
@@ -190,7 +206,7 @@ class EditorUI {
     if (tabEl) tabEl.classList.add('active');
     if (wrapper) {
       wrapper.classList.add('active');
-      wrapper.querySelector('textarea').focus();
+      (wrapper.querySelector('textarea') as HTMLTextAreaElement)?.focus();
     }
 
     this._updateLineNumbers(id);
@@ -201,7 +217,7 @@ class EditorUI {
     this.bus.emit('tab:switch', tab);
   }
 
-  closeTab(id) {
+  closeTab(id: number): void {
     const idx = this.tabs.findIndex(t => t.id === id);
     if (idx === -1) return;
 
@@ -220,25 +236,27 @@ class EditorUI {
     }
   }
 
-  getActiveTab() { return this.activeTab; }
-  getActiveEditor() {
+  getActiveTab(): Tab | null { return this.activeTab; }
+
+  getActiveEditor(): HTMLTextAreaElement | null {
     const wrapper = document.querySelector('.editor-wrapper.active');
     return wrapper ? wrapper.querySelector('textarea') : null;
   }
-  getTabs() { return this.tabs; }
 
-  getSelection() {
+  getTabs(): Tab[] { return this.tabs; }
+
+  getSelection(): { start: number; end: number } | null {
     const editor = this.getActiveEditor();
     if (!editor) return null;
     return { start: editor.selectionStart, end: editor.selectionEnd };
   }
 
-  setSelection(start, end) {
+  setSelection(start: number, end: number): void {
     const editor = this.getActiveEditor();
     if (editor) { editor.focus(); editor.setSelectionRange(start, end); }
   }
 
-  insertText(text) {
+  insertText(text: string): void {
     const editor = this.getActiveEditor();
     if (!editor) return;
     const pos = editor.selectionStart;
@@ -251,7 +269,7 @@ class EditorUI {
     if (tab) this._updateHighlight(tab.id);
   }
 
-  deleteSelection() {
+  deleteSelection(): void {
     const editor = this.getActiveEditor();
     if (!editor) return;
     const start = editor.selectionStart;
@@ -264,12 +282,12 @@ class EditorUI {
     if (tab) this._updateHighlight(tab.id);
   }
 
-  getContent() {
+  getContent(): string {
     const editor = this.getActiveEditor();
     return editor ? editor.value : '';
   }
 
-  setContent(content) {
+  setContent(content: string): void {
     const editor = this.getActiveEditor();
     if (editor) {
       editor.value = content;
@@ -279,7 +297,7 @@ class EditorUI {
     }
   }
 
-  updateStatusBar() {
+  updateStatusBar(): void {
     const editor = this.getActiveEditor();
     const tab = this.getActiveTab();
     if (!editor || !tab) return;
@@ -292,7 +310,7 @@ class EditorUI {
     const selected = editor.selectionEnd - editor.selectionStart;
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const lines = text.split('\n').length;
-    const lang = LanguageDetector.detect(tab.title);
+    const lang = SyntaxHighlighter.detectLanguage(tab.title);
 
     this._elements.statusCursor.textContent = `Ln ${line}, Col ${col}`;
     const selEl = this._elements.statusSelection;
@@ -309,65 +327,58 @@ class EditorUI {
     this._elements.statusZoom.textContent = `${this.currentZoom}%`;
   }
 
-  setZoom(val) {
+  setZoom(val: number): void {
     this.currentZoom = Math.max(50, Math.min(200, val));
     const size = 14 * this.currentZoom / 100;
-    document.querySelectorAll('textarea').forEach(ta => { ta.style.fontSize = `${size}px`; });
-    document.querySelectorAll('.line-numbers').forEach(ln => { ln.style.fontSize = `${size}px`; });
-    document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.fontSize = `${size}px`; });
+    document.querySelectorAll('textarea').forEach(ta => { (ta as HTMLElement).style.fontSize = `${size}px`; });
+    document.querySelectorAll('.line-numbers').forEach(ln => { (ln as HTMLElement).style.fontSize = `${size}px`; });
+    document.querySelectorAll('.highlight-layer').forEach(hl => { (hl as HTMLElement).style.fontSize = `${size}px`; });
     this.updateStatusBar();
   }
 
-  toggleWordWrap() {
+  toggleWordWrap(): void {
     this.wordWrap = !this.wordWrap;
-    document.querySelectorAll('textarea').forEach(ta => { ta.style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre'; });
-    document.querySelectorAll('.highlight-layer').forEach(hl => { hl.style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre'; });
+    document.querySelectorAll('textarea').forEach(ta => { (ta as HTMLElement).style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre'; });
+    document.querySelectorAll('.highlight-layer').forEach(hl => { (hl as HTMLElement).style.whiteSpace = this.wordWrap ? 'pre-wrap' : 'pre'; });
   }
 
-  toggleLineNumbers() {
+  toggleLineNumbers(): void {
     this.showLineNumbers = !this.showLineNumbers;
     document.querySelectorAll('.line-numbers').forEach(ln => {
-      ln.style.display = this.showLineNumbers ? '' : 'none';
+      (ln as HTMLElement).style.display = this.showLineNumbers ? '' : 'none';
     });
   }
 
-  // Workspace / Explorer
-  async loadWorkspace(folderPath) {
+  async loadWorkspace(folderPath: string): Promise<void> {
     this.workspacePath = folderPath;
-    this.workspaceFiles = await this._readDirRecursive(folderPath);
+    this.workspaceFiles = await this._readDir(folderPath);
     this._renderWorkspace();
   }
 
-  async _readDirRecursive(dirPath, depth = 0) {
-    const items = [];
+  private async _readDir(dirPath: string): Promise<TreeItem[]> {
+    const items: TreeItem[] = [];
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      const api = window.electronAPI;
+      const entries = api.readDir(dirPath);
       entries.sort((a, b) => {
-        if (a.isDirectory() && !b.isDirectory()) return -1;
-        if (!a.isDirectory() && b.isDirectory()) return 1;
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
         return a.name.localeCompare(b.name);
       });
       for (const entry of entries) {
         if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
-        const fullPath = path.join(dirPath, entry.name);
-        if (entry.isDirectory()) {
-          items.push({
-            name: entry.name,
-            path: fullPath,
-            type: 'folder',
-            children: await this._readDirRecursive(fullPath, depth + 1)
-          });
+        const fullPath = api.join(dirPath, entry.name);
+        if (entry.isDirectory) {
+          items.push({ name: entry.name, path: fullPath, type: 'folder' });
         } else {
           items.push({ name: entry.name, path: fullPath, type: 'file' });
         }
       }
-    } catch (err) {}
+    } catch (_err) {}
     return items;
   }
 
-  _renderWorkspace() {
+  private _renderWorkspace(): void {
     const container = document.getElementById('explorer-workspace');
     if (!container) return;
     container.innerHTML = '';
@@ -375,19 +386,21 @@ class EditorUI {
       container.innerHTML = '<div class="explorer-empty">No folder opened</div>';
       return;
     }
-    const folderName = this.workspacePath.split(/[/\\]/).pop();
+    const folderName = this.workspacePath.split(/[/\\]/).pop() || '';
     const rootEl = this._createTreeItem({ name: folderName, path: this.workspacePath, type: 'folder', children: this.workspaceFiles }, 0, true);
     container.appendChild(rootEl);
   }
 
-  _createTreeItem(item, depth, isOpen = false) {
+  private _createTreeItem(item: TreeItem, depth: number, isOpen: boolean = false): HTMLElement {
     const el = document.createElement('div');
     el.className = 'tree-item';
-    el.style.paddingLeft = `${12 + depth * 16}px`;
+
+    const indent = `${8 + depth * 14}px`;
 
     if (item.type === 'folder') {
       const header = document.createElement('div');
       header.className = 'tree-folder';
+      header.style.paddingLeft = indent;
       header.innerHTML = `<span class="tree-arrow ${isOpen ? 'open' : ''}">&#9654;</span><span class="tree-icon">&#128193;</span><span class="tree-name">${this._escapeHtml(item.name)}</span>`;
       el.appendChild(header);
 
@@ -395,17 +408,42 @@ class EditorUI {
       children.className = 'tree-children';
       children.style.display = isOpen ? 'block' : 'none';
 
-      if (item.children) {
+      if (isOpen && item.children) {
         item.children.forEach(child => {
           children.appendChild(this._createTreeItem(child, depth + 1));
         });
       }
 
-      header.addEventListener('click', () => {
-        const arrow = header.querySelector('.tree-arrow');
+      let loaded = isOpen && item.children && item.children.length > 0;
+
+      header.addEventListener('click', async () => {
+        const arrow = header.querySelector('.tree-arrow') as HTMLElement;
         const isOpenNow = children.style.display !== 'none';
-        children.style.display = isOpenNow ? 'none' : 'block';
-        arrow.classList.toggle('open', !isOpenNow);
+
+        if (isOpenNow) {
+          children.style.display = 'none';
+          arrow.classList.remove('open');
+        } else {
+          if (!loaded) {
+            children.innerHTML = '<div class="tree-loading" style="padding:2px 0;font-size:11px;color:var(--text-muted);">Loading...</div>';
+            children.style.display = 'block';
+            arrow.classList.add('open');
+            try {
+              const subItems = await this._readDir(item.path);
+              item.children = subItems;
+              children.innerHTML = '';
+              subItems.forEach(child => {
+                children.appendChild(this._createTreeItem(child, depth + 1));
+              });
+              loaded = true;
+            } catch {
+              children.innerHTML = '<div class="tree-loading" style="padding:2px 0;font-size:11px;color:var(--text-muted);">Failed to load</div>';
+            }
+          } else {
+            children.style.display = 'block';
+            arrow.classList.add('open');
+          }
+        }
       });
 
       header.addEventListener('contextmenu', (e) => {
@@ -417,7 +455,7 @@ class EditorUI {
     } else {
       const fileEl = document.createElement('div');
       fileEl.className = 'tree-file';
-      fileEl.style.paddingLeft = `${12 + depth * 16}px`;
+      fileEl.style.paddingLeft = indent;
 
       const icon = SyntaxHighlighter.getFileIcon(item.name);
       fileEl.innerHTML = `<span class="file-icon-badge" style="background:${icon.bg};color:${icon.color}">${icon.label}</span><span class="tree-name">${this._escapeHtml(item.name)}</span>`;
@@ -433,70 +471,66 @@ class EditorUI {
     return el;
   }
 
-  refreshWorkspace() {
+  refreshWorkspace(): void {
     if (this.workspacePath) this.loadWorkspace(this.workspacePath);
   }
 
-  async createFileInWorkspace(name, parentPath) {
-    const fs = require('fs');
-    const path = require('path');
-    const filePath = parentPath ? path.join(parentPath, name) : path.join(this.workspacePath, name);
+  async createFileInWorkspace(name: string, parentPath?: string): Promise<boolean> {
+    const api = window.electronAPI;
+    const filePath = parentPath ? api.join(parentPath, name) : api.join(this.workspacePath!, name);
     try {
-      fs.writeFileSync(filePath, '', 'utf-8');
+      api.writeFile(filePath, '');
       this.refreshWorkspace();
       this.bus.emit('explorer:openfile', { name, path: filePath, type: 'file' });
       return true;
-    } catch (err) { return false; }
+    } catch (_err) { return false; }
   }
 
-  async createFolderInWorkspace(name, parentPath) {
-    const fs = require('fs');
-    const path = require('path');
-    const folderPath = parentPath ? path.join(parentPath, name) : path.join(this.workspacePath, name);
+  async createFolderInWorkspace(name: string, parentPath?: string): Promise<boolean> {
+    const api = window.electronAPI;
+    const folderPath = parentPath ? api.join(parentPath, name) : api.join(this.workspacePath!, name);
     try {
-      fs.mkdirSync(folderPath, { recursive: true });
+      api.mkdirSync(folderPath);
       this.refreshWorkspace();
       return true;
-    } catch (err) { return false; }
+    } catch (_err) { return false; }
   }
 
-  async deleteFileInWorkspace(filePath) {
-    const fs = require('fs');
+  async deleteFileInWorkspace(filePath: string): Promise<boolean> {
+    const api = window.electronAPI;
     try {
-      const stat = fs.statSync(filePath);
-      if (stat.isDirectory()) {
-        fs.rmSync(filePath, { recursive: true, force: true });
+      const stat = api.statSync(filePath);
+      if (stat.isDirectory) {
+        api.rmSync(filePath);
       } else {
-        fs.unlinkSync(filePath);
+        api.unlinkSync(filePath);
       }
       this.refreshWorkspace();
       return true;
-    } catch (err) { return false; }
+    } catch (_err) { return false; }
   }
 
-  async renameFileInWorkspace(oldPath, newName) {
-    const fs = require('fs');
-    const path = require('path');
-    const dir = path.dirname(oldPath);
-    const newPath = path.join(dir, newName);
+  async renameFileInWorkspace(oldPath: string, newName: string): Promise<boolean> {
+    const api = window.electronAPI;
+    const dir = api.dirname(oldPath);
+    const newPath = api.join(dir, newName);
     try {
-      fs.renameSync(oldPath, newPath);
+      api.renameSync(oldPath, newPath);
       this.refreshWorkspace();
-      // Update tab if open
       const tab = this.tabs.find(t => t.filePath === oldPath);
       if (tab) {
         tab.filePath = newPath;
         tab.title = newName;
         const tabEl = document.querySelector(`.tab[data-id="${tab.id}"]`);
-        if (tabEl) tabEl.querySelector('.tab-title').textContent = newName;
+        if (tabEl) (tabEl.querySelector('.tab-title') as HTMLElement).textContent = newName;
         this._updateSidebar();
         this._updateTitlebar();
       }
       return true;
-    } catch (err) { return false; }
+    } catch (_err) { return false; }
   }
 
-  _updateSidebar() {
+  _updateSidebar(): void {
     const container = this._elements.sidebarFiles;
     if (!container) return;
     container.innerHTML = '';
@@ -519,7 +553,7 @@ class EditorUI {
     });
   }
 
-  _updateTitlebar() {
+  _updateTitlebar(): void {
     const tab = this.getActiveTab();
     const title = tab ? tab.title : 'MyNote';
     const prefix = tab && tab.modified ? '● ' : '';
@@ -529,9 +563,9 @@ class EditorUI {
     }
   }
 
-  _updateLineNumbers(id) {
+  private _updateLineNumbers(id: number): void {
     const lineEl = document.getElementById(`lines-${id}`);
-    const textarea = document.getElementById(`editor-${id}`);
+    const textarea = document.getElementById(`editor-${id}`) as HTMLTextAreaElement;
     if (!lineEl || !textarea) return;
     const lineCount = textarea.value.split('\n').length;
     const currentLine = textarea.value.substring(0, textarea.selectionStart).split('\n').length;
@@ -542,9 +576,9 @@ class EditorUI {
     lineEl.innerHTML = html;
   }
 
-  _updateHighlight(id) {
-    const highlightCode = document.querySelector(`#highlight-${id} .highlight-code`);
-    const textarea = document.getElementById(`editor-${id}`);
+  private _updateHighlight(id: number): void {
+    const highlightCode = document.querySelector(`#highlight-${id} .highlight-code`) as HTMLElement;
+    const textarea = document.getElementById(`editor-${id}`) as HTMLTextAreaElement;
     const tab = this.tabs.find(t => t.id === id);
     if (!highlightCode || !textarea || !tab) return;
 
@@ -553,7 +587,7 @@ class EditorUI {
     highlightCode.innerHTML = highlighted + '\n';
   }
 
-  _handleKeys(e, id) {
+  private _handleKeys(e: KeyboardEvent, id: number): void {
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
       const idx = this.tabs.findIndex(t => t.id === id);
@@ -570,7 +604,7 @@ class EditorUI {
       if (tab) {
         const content = tab.document.undo();
         if (content !== null) {
-          const editor = document.getElementById(`editor-${id}`);
+          const editor = document.getElementById(`editor-${id}`) as HTMLTextAreaElement;
           if (editor) { editor.value = content; this._updateHighlight(id); }
         }
       }
@@ -581,19 +615,18 @@ class EditorUI {
       if (tab) {
         const content = tab.document.redo();
         if (content !== null) {
-          const editor = document.getElementById(`editor-${id}`);
+          const editor = document.getElementById(`editor-${id}`) as HTMLTextAreaElement;
           if (editor) { editor.value = content; this._updateHighlight(id); }
         }
       }
     }
-    // Tab key inserts spaces
     if (e.key === 'Tab' && !e.ctrlKey) {
       e.preventDefault();
       this.insertText('    ');
     }
   }
 
-  _escapeHtml(text) {
+  _escapeHtml(text: string): string {
     const d = document.createElement('div');
     d.textContent = text;
     return d.innerHTML;

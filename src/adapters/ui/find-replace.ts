@@ -1,24 +1,35 @@
-class FindReplaceUI {
-  constructor(editorUI) {
+import type { EditorUI } from './editor';
+import type { SearchMatch } from '../../types';
+
+export class FindReplaceUI {
+  private editorUI: EditorUI;
+  private matches: SearchMatch[];
+  private currentIndex: number;
+  private _panel: HTMLElement;
+  private _replaceRow: HTMLElement;
+  private _input: HTMLInputElement;
+  private _replaceInput: HTMLInputElement;
+  private _count: HTMLElement;
+
+  constructor(editorUI: EditorUI) {
     this.editorUI = editorUI;
     this.matches = [];
     this.currentIndex = -1;
+    this._panel = document.getElementById('find-panel')!;
+    this._replaceRow = document.getElementById('replace-row')!;
+    this._input = document.getElementById('find-input') as HTMLInputElement;
+    this._replaceInput = document.getElementById('replace-input') as HTMLInputElement;
+    this._count = document.getElementById('find-count')!;
     this._init();
   }
 
-  _init() {
-    this._panel = document.getElementById('find-panel');
-    this._replaceRow = document.getElementById('replace-row');
-    this._input = document.getElementById('find-input');
-    this._replaceInput = document.getElementById('replace-input');
-    this._count = document.getElementById('find-count');
-
+  private _init(): void {
     this._input.addEventListener('input', () => this.doFind());
-    document.getElementById('find-next').addEventListener('click', () => this.findNext());
-    document.getElementById('find-prev').addEventListener('click', () => this.findPrev());
-    document.getElementById('find-close').addEventListener('click', () => this.close());
-    document.getElementById('replace-one').addEventListener('click', () => this.replaceOne());
-    document.getElementById('replace-all').addEventListener('click', () => this.replaceAll());
+    document.getElementById('find-next')!.addEventListener('click', () => this.findNext());
+    document.getElementById('find-prev')!.addEventListener('click', () => this.findPrev());
+    document.getElementById('find-close')!.addEventListener('click', () => this.close());
+    document.getElementById('replace-one')!.addEventListener('click', () => this.replaceOne());
+    document.getElementById('replace-all')!.addEventListener('click', () => this.replaceAll());
 
     this._input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -31,11 +42,11 @@ class FindReplaceUI {
       if (e.key === 'Escape') this.close();
     });
 
-    document.getElementById('find-match-case').addEventListener('change', () => this.doFind());
-    document.getElementById('find-whole-word').addEventListener('change', () => this.doFind());
+    document.getElementById('find-match-case')!.addEventListener('change', () => this.doFind());
+    document.getElementById('find-whole-word')!.addEventListener('change', () => this.doFind());
   }
 
-  open(withReplace = false) {
+  open(withReplace: boolean = false): void {
     this._panel.classList.remove('hidden');
     this._replaceRow.classList.toggle('hidden', !withReplace);
     this._input.focus();
@@ -49,14 +60,14 @@ class FindReplaceUI {
     }
   }
 
-  close() {
+  close(): void {
     this._panel.classList.add('hidden');
     this.matches = [];
     this.currentIndex = -1;
     this._count.textContent = '0 results';
   }
 
-  doFind() {
+  doFind(): void {
     const query = this._input.value;
     if (!query) {
       this.matches = [];
@@ -69,8 +80,8 @@ class FindReplaceUI {
     if (!tab) return;
 
     const content = tab.getContent();
-    const matchCase = document.getElementById('find-match-case').checked;
-    const wholeWord = document.getElementById('find-whole-word').checked;
+    const matchCase = (document.getElementById('find-match-case') as HTMLInputElement).checked;
+    const wholeWord = (document.getElementById('find-whole-word') as HTMLInputElement).checked;
 
     this.matches = [];
     let idx = 0;
@@ -99,19 +110,19 @@ class FindReplaceUI {
     if (this.currentIndex >= 0) this._selectMatch();
   }
 
-  findNext() {
+  findNext(): void {
     if (this.matches.length === 0) return;
     this.currentIndex = (this.currentIndex + 1) % this.matches.length;
     this._selectMatch();
   }
 
-  findPrev() {
+  findPrev(): void {
     if (this.matches.length === 0) return;
     this.currentIndex = (this.currentIndex - 1 + this.matches.length) % this.matches.length;
     this._selectMatch();
   }
 
-  replaceOne() {
+  replaceOne(): void {
     if (this.currentIndex < 0 || this.currentIndex >= this.matches.length) return;
     const tab = this.editorUI.getActiveTab();
     if (!tab) return;
@@ -123,12 +134,11 @@ class FindReplaceUI {
     this.doFind();
   }
 
-  replaceAll() {
+  replaceAll(): void {
     if (this.matches.length === 0) return;
     const tab = this.editorUI.getActiveTab();
     if (!tab) return;
     const replacement = this._replaceInput.value;
-    const query = this._input.value;
     let content = tab.getContent();
     for (let i = this.matches.length - 1; i >= 0; i--) {
       const m = this.matches[i];
@@ -139,14 +149,14 @@ class FindReplaceUI {
     this.doFind();
   }
 
-  _selectMatch() {
+  private _selectMatch(): void {
     if (this.currentIndex < 0) return;
     const m = this.matches[this.currentIndex];
     this.editorUI.setSelection(m.start, m.end);
     this._updateCount();
   }
 
-  _updateCount() {
+  private _updateCount(): void {
     if (this.matches.length === 0) {
       this._count.textContent = '0 results';
     } else {

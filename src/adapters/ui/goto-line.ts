@@ -1,31 +1,37 @@
-class GotoLineUI {
-  constructor(editorUI) {
+import type { EditorUI } from './editor';
+
+export class GotoLineUI {
+  private editorUI: EditorUI;
+  private _panel: HTMLElement;
+  private _input: HTMLInputElement;
+
+  constructor(editorUI: EditorUI) {
     this.editorUI = editorUI;
+    this._panel = document.getElementById('goto-panel')!;
+    this._input = document.getElementById('goto-input') as HTMLInputElement;
     this._init();
   }
 
-  _init() {
-    this._panel = document.getElementById('goto-panel');
-    this._input = document.getElementById('goto-input');
-    document.getElementById('goto-go').addEventListener('click', () => this._go());
-    document.getElementById('goto-close').addEventListener('click', () => this.close());
+  private _init(): void {
+    document.getElementById('goto-go')!.addEventListener('click', () => this._go());
+    document.getElementById('goto-close')!.addEventListener('click', () => this.close());
     this._input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this._go();
       if (e.key === 'Escape') this.close();
     });
   }
 
-  open() {
+  open(): void {
     this._panel.classList.remove('hidden');
     this._input.value = '';
     this._input.focus();
   }
 
-  close() {
+  close(): void {
     this._panel.classList.add('hidden');
   }
 
-  _go() {
+  private _go(): void {
     const line = parseInt(this._input.value);
     if (isNaN(line) || line < 1) return;
     const tab = this.editorUI.getActiveTab();

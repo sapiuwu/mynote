@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:;">
   <title>MyNote</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -135,14 +136,12 @@
 
         <div id="terminal-panel" class="hidden">
           <div class="terminal-header">
-            <span>TERMINAL</span>
+            <div class="terminal-tabs">
+              <button id="terminal-new-btn" class="terminal-new-btn" title="New Terminal">+</button>
+            </div>
             <button id="terminal-close" class="terminal-close-btn">&times;</button>
           </div>
-          <div id="terminal-output"></div>
-          <div class="terminal-input-row">
-            <span class="terminal-prompt">$</span>
-            <input type="text" id="terminal-input" spellcheck="false" autocomplete="off">
-          </div>
+          <div class="terminal-body"></div>
         </div>
       </div>
     </div>
@@ -194,21 +193,6 @@
     </div>
   </div>
 
-  <script src="src/core/domain/tab.js"></script>
-  <script src="src/core/domain/cursor.js"></script>
-  <script src="src/core/domain/plugin.js"></script>
-  <script src="src/core/services/plugin-service.js"></script>
-  <script src="src/core/syntax-highlighter.js"></script>
-  <script src="src/adapters/ui/event-bus.js"></script>
-  <script src="src/adapters/ui/editor.js"></script>
-  <script src="src/adapters/ui/find-replace.js"></script>
-  <script src="src/adapters/ui/command-palette.js"></script>
-  <script src="src/adapters/ui/goto-line.js"></script>
-  <script src="src/adapters/ui/terminal.js"></script>
-  <script src="src/plugins/word-counter/index.js"></script>
-  <script src="src/plugins/auto-save/index.js"></script>
-  <script src="src/plugins/bracket-colorizer/index.js"></script>
-  <script src="src/plugins/minimap/index.js"></script>
-  <script src="renderer.js"></script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

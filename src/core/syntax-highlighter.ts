@@ -1,5 +1,12 @@
-class SyntaxHighlighter {
-  static LANGUAGES = {
+import type { FileIcon, LanguageName } from '../types';
+
+interface LanguageRules {
+  [key: string]: RegExp | Record<string, string>;
+  colors: Record<string, string>;
+}
+
+export class SyntaxHighlighter {
+  private static LANGUAGES: Record<string, LanguageRules> = {
     javascript: {
       keywords: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|class|extends|new|this|super|import|from|export|default|try|catch|finally|throw|async|await|yield|typeof|instanceof|in|of|void|delete|true|false|null|undefined|NaN|Infinity)\b/g,
       strings: /(["'`])(?:(?!\1|\\).|\\.)*?\1/g,
@@ -98,7 +105,7 @@ class SyntaxHighlighter {
     }
   };
 
-  static FILE_ICONS = {
+  private static FILE_ICONS: Record<string, FileIcon> = {
     js: { color: '#f7df1e', label: 'JS', bg: '#323330' },
     jsx: { color: '#61dafb', label: 'JSX', bg: '#282c34' },
     ts: { color: '#3178c6', label: 'TS', bg: '#1e1e1e' },
@@ -135,12 +142,12 @@ class SyntaxHighlighter {
     lock: { color: '#888', label: 'LK', bg: '#333' }
   };
 
-  static detectLanguage(filename) {
+  static detectLanguage(filename: string | null): LanguageName {
     if (!filename) return 'text';
-    const ext = filename.split('.').pop().toLowerCase();
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
     const base = filename.startsWith('.') ? filename.slice(1).toLowerCase() : filename.toLowerCase();
 
-    const map = {
+    const map: Record<string, LanguageName> = {
       js: 'javascript', jsx: 'javascript', mjs: 'javascript',
       ts: 'javascript', tsx: 'javascript',
       py: 'python', pyw: 'python',
@@ -155,14 +162,14 @@ class SyntaxHighlighter {
     return map[ext] || map[base] || 'text';
   }
 
-  static getFileIcon(filename) {
+  static getFileIcon(filename: string | null): FileIcon {
     if (!filename) return { color: '#969696', label: '??', bg: '#2d2d2d' };
-    const ext = filename.split('.').pop().toLowerCase();
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
     const base = filename.startsWith('.') ? filename.slice(1).toLowerCase() : filename.toLowerCase();
     return this.FILE_ICONS[ext] || this.FILE_ICONS[base] || { color: '#969696', label: ext.substring(0, 2).toUpperCase(), bg: '#2d2d2d' };
   }
 
-  static escapeHtml(text) {
+  static escapeHtml(text: string): string {
     return text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -170,31 +177,27 @@ class SyntaxHighlighter {
       .replace(/"/g, '&quot;');
   }
 
-  static highlight(code, language) {
+  static highlight(code: string, language: string): string {
     if (!code) return '';
     const lang = this.LANGUAGES[language];
     if (!lang) return this.escapeHtml(code);
 
     const escaped = this.escapeHtml(code);
-    const tokens = [];
-    let result = escaped;
+    const rules: Array<{ type: string; start: number; end: number; text: string }> = [];
 
-    // Collect all matches
-    const rules = [];
     for (const [type, regex] of Object.entries(lang)) {
       if (type === 'colors') continue;
+      if (!(regex instanceof RegExp)) continue;
       const r = new RegExp(regex.source, regex.flags);
-      let m;
+      let m: RegExpExecArray | null;
       while ((m = r.exec(escaped)) !== null) {
         rules.push({ type, start: m.index, end: m.index + m[0].length, text: m[0] });
       }
     }
 
-    // Sort by start position, longer matches first for same position
     rules.sort((a, b) => a.start - b.start || b.end - a.end);
 
-    // Remove overlapping tokens (keep first/longest)
-    const used = [];
+    const used: Array<{ type: string; start: number; end: number; text: string }> = [];
     for (const rule of rules) {
       let overlaps = false;
       for (const u of used) {
@@ -203,14 +206,14 @@ class SyntaxHighlighter {
       if (!overlaps) used.push(rule);
     }
 
-    // Build highlighted result
     let html = '';
     let lastEnd = 0;
     for (const token of used) {
       if (token.start > lastEnd) {
         html += escaped.substring(lastEnd, token.start);
       }
-      const color = lang.colors[token.type] || '#d4d4d4';
+      const colors = lang.colors as Record<string, string>;
+      const color = colors[token.type] || '#d4d4d4';
       html += `<span style="color:${color}">${token.text}</span>`;
       lastEnd = token.end;
     }

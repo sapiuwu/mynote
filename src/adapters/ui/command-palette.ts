@@ -1,21 +1,32 @@
-class CommandPaletteUI {
-  constructor(editorUI, eventBus) {
+import type { EditorUI } from './editor';
+import type { IEventBus, Command } from '../../types';
+
+export class CommandPaletteUI {
+  private editorUI: EditorUI;
+  private bus: IEventBus;
+  commands: Command[];
+  private filtered: Command[];
+  private selectedIndex: number;
+  private _panel: HTMLElement;
+  private _input: HTMLInputElement;
+  private _list: HTMLElement;
+
+  constructor(editorUI: EditorUI, bus: IEventBus) {
     this.editorUI = editorUI;
-    this.bus = eventBus;
+    this.bus = bus;
     this.commands = [];
     this.filtered = [];
     this.selectedIndex = 0;
+    this._panel = document.getElementById('command-palette')!;
+    this._input = document.getElementById('command-input') as HTMLInputElement;
+    this._list = document.getElementById('command-list')!;
     this._init();
   }
 
-  _init() {
-    this._panel = document.getElementById('command-palette');
-    this._input = document.getElementById('command-input');
-    this._list = document.getElementById('command-list');
-
+  private _init(): void {
     this._input.addEventListener('input', () => this._filter());
     this._input.addEventListener('keydown', (e) => this._handleKey(e));
-    document.getElementById('command-palette-close').addEventListener('click', () => this.close());
+    document.getElementById('command-palette-close')!.addEventListener('click', () => this.close());
 
     this._panel.addEventListener('click', (e) => {
       if (e.target === this._panel) this.close();
@@ -24,7 +35,7 @@ class CommandPaletteUI {
     this._registerBuiltinCommands();
   }
 
-  _registerBuiltinCommands() {
+  private _registerBuiltinCommands(): void {
     this.commands = [
       { id: 'file.new', label: 'New Tab', category: 'File', shortcut: 'Ctrl+N', execute: () => this.editorUI.createTab() },
       { id: 'file.open', label: 'Open File', category: 'File', shortcut: 'Ctrl+O', execute: () => this.bus.emit('command:open') },
@@ -52,7 +63,7 @@ class CommandPaletteUI {
       { id: 'view.zoomIn', label: 'Zoom In', category: 'View', shortcut: 'Ctrl+=', execute: () => this.editorUI.setZoom(this.editorUI.currentZoom + 10) },
       { id: 'view.zoomOut', label: 'Zoom Out', category: 'View', shortcut: 'Ctrl+-', execute: () => this.editorUI.setZoom(this.editorUI.currentZoom - 10) },
       { id: 'view.zoomReset', label: 'Reset Zoom', category: 'View', shortcut: 'Ctrl+0', execute: () => this.editorUI.setZoom(100) },
-      { id: 'view.toggleSidebar', label: 'Toggle Sidebar', category: 'View', shortcut: 'Ctrl+B', execute: () => document.getElementById('sidebar').classList.toggle('collapsed') },
+      { id: 'view.toggleSidebar', label: 'Toggle Sidebar', category: 'View', shortcut: 'Ctrl+B', execute: () => document.getElementById('sidebar')!.classList.toggle('collapsed') },
       { id: 'view.refreshExplorer', label: 'Refresh Explorer', category: 'View', execute: () => this.editorUI.refreshWorkspace() },
 
       { id: 'terminal.new', label: 'Open Terminal', category: 'Terminal', shortcut: 'Ctrl+`', execute: () => this.bus.emit('command:terminal') },
@@ -62,27 +73,27 @@ class CommandPaletteUI {
     ];
   }
 
-  registerCommand(command) {
+  registerCommand(command: Command): void {
     this.commands.push(command);
   }
 
-  open() {
+  open(): void {
     this._panel.classList.remove('hidden');
     this._input.value = '';
     this._input.focus();
     this._filter();
   }
 
-  close() {
+  close(): void {
     this._panel.classList.add('hidden');
   }
 
-  toggle() {
+  toggle(): void {
     if (this._panel.classList.contains('hidden')) this.open();
     else this.close();
   }
 
-  _filter() {
+  private _filter(): void {
     const query = this._input.value.toLowerCase();
     this.filtered = this.commands.filter(cmd =>
       cmd.label.toLowerCase().includes(query) ||
@@ -92,7 +103,7 @@ class CommandPaletteUI {
     this._render();
   }
 
-  _render() {
+  private _render(): void {
     this._list.innerHTML = '';
     let lastCategory = '';
     this.filtered.forEach((cmd, i) => {
@@ -118,7 +129,7 @@ class CommandPaletteUI {
     });
   }
 
-  _updateSelection() {
+  private _updateSelection(): void {
     this._list.querySelectorAll('.command-item').forEach((el, i) => {
       el.classList.toggle('selected', i === this.selectedIndex);
     });
@@ -126,7 +137,7 @@ class CommandPaletteUI {
     if (selected) selected.scrollIntoView({ block: 'nearest' });
   }
 
-  _handleKey(e) {
+  private _handleKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') { this.close(); return; }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -146,7 +157,7 @@ class CommandPaletteUI {
     }
   }
 
-  _execute(cmd) {
+  private _execute(cmd: Command): void {
     this.close();
     if (cmd.execute) cmd.execute();
   }

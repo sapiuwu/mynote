@@ -1,4 +1,7 @@
-class MinimapPlugin extends Plugin {
+import { Plugin } from '../../core/domain/plugin';
+import type { PluginContext } from '../../core/domain/plugin';
+
+export class MinimapPlugin extends Plugin {
   static METADATA = {
     id: 'builtin.minimap',
     name: 'Minimap',
@@ -7,7 +10,9 @@ class MinimapPlugin extends Plugin {
     author: 'MyNote'
   };
 
-  async onActivate(ctx) {
+  private style: HTMLStyleElement | null = null;
+
+  protected async onActivate(_ctx: PluginContext): Promise<void> {
     this.style = document.createElement('style');
     this.style.textContent = `
       .minimap-container {
@@ -36,7 +41,7 @@ class MinimapPlugin extends Plugin {
     document.head.appendChild(this.style);
   }
 
-  async onDeactivate() {
+  protected async onDeactivate(): Promise<void> {
     if (this.style) this.style.remove();
     document.querySelectorAll('.minimap-container').forEach(el => el.remove());
   }
