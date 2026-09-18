@@ -28,6 +28,8 @@ const pluginContext = {
     setContent: (c) => editorUI.setContent(c)
   },
   eventBus,
+  onEvent: (event, handler) => eventBus.on(event, handler),
+  emitEvent: (event, data) => eventBus.emit(event, data),
   settings: {
     get: (key) => { try { return JSON.parse(localStorage.getItem(`setting:${key}`)); } catch { return null; } },
     set: (key, value) => { localStorage.setItem(`setting:${key}`, JSON.stringify(value)); eventBus.emit('settings:changed', { key, value }); },
@@ -332,7 +334,6 @@ function applySetting(key, value) {
       document.querySelectorAll('.line-numbers').forEach(ln => { ln.style.display = value ? '' : 'none'; });
       break;
   }
-}
 }
 
 // ===================== CONTEXT MENU =====================
