@@ -50,7 +50,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.3",
-    "electron": "^39.8.10",
+    "electron": "^42.11.16",
     "electron-builder": "^26.15.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.2",
